@@ -20,6 +20,7 @@
     --accent-green: #66bb6a;
     --accent-gold: #ffd54f;
     --accent-orange: #ff9800;
+    --accent-purple: #b388ff;
     --glow-ice: rgba(79, 195, 247, 0.15);
     --glow-red: rgba(239, 83, 80, 0.15);
   }
@@ -188,6 +189,8 @@
   .accent-ice { background: var(--accent-ice); box-shadow: 0 0 8px var(--glow-ice); }
   .accent-red { background: var(--accent-red); box-shadow: 0 0 8px var(--glow-red); }
   .accent-gold { background: var(--accent-gold); }
+  .accent-green { background: var(--accent-green); }
+  .accent-purple { background: var(--accent-purple); }
 
   /* Tables */
   table { width: 100%; border-collapse: collapse; }
@@ -209,13 +212,12 @@
   th.sortable { cursor: pointer; user-select: none; }
   th.sortable:hover { color: var(--accent-ice); }
   th.sortable::after {
-    content: '';
-    display: inline-block;
-    margin-left: 4px;
+    content: ' ⇅';
     opacity: 0.3;
+    font-size: 0.6rem;
   }
-  th.sort-asc::after { content: '▲'; opacity: 0.8; color: var(--accent-ice); }
-  th.sort-desc::after { content: '▼'; opacity: 0.8; color: var(--accent-ice); }
+  th.sort-asc::after { content: ' ▲'; opacity: 0.8; color: var(--accent-ice); }
+  th.sort-desc::after { content: ' ▼'; opacity: 0.8; color: var(--accent-ice); }
   td {
     font-size: 0.92rem;
     padding: 9px 14px;
@@ -256,6 +258,8 @@
   }
   .stat-value.red { color: var(--accent-red); }
   .stat-value.green { color: var(--accent-green); }
+  .stat-value.gold { color: var(--accent-gold); }
+  .stat-value.purple { color: var(--accent-purple); }
 
   /* Standings specific */
   .standings-scroll {
@@ -290,6 +294,7 @@
     gap: 8px;
     margin-bottom: 16px;
     align-items: center;
+    flex-wrap: wrap;
   }
   .filter-btn {
     font-family: 'Source Code Pro', monospace;
@@ -373,6 +378,18 @@
     font-size: 0.7rem;
     color: var(--text-muted);
   }
+  .game-winner .game-team-abbr { color: var(--accent-green); }
+
+  /* Teams tab */
+  .teams-scroll {
+    max-height: 700px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .teams-scroll::-webkit-scrollbar { width: 5px; }
+  .teams-scroll::-webkit-scrollbar-track { background: transparent; }
+  .teams-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
   /* Loading & Error */
   .loading-state {
@@ -412,6 +429,21 @@
     letter-spacing: 0.5px;
   }
 
+  /* Today highlight in schedule */
+  .today-label {
+    display: inline-block;
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.6rem;
+    background: var(--accent-ice);
+    color: var(--bg-deep);
+    padding: 1px 6px;
+    border-radius: 2px;
+    margin-left: 8px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+  }
+
   /* Responsive */
   @media (max-width: 900px) {
     .leaders-grid { grid-template-columns: 1fr; }
@@ -423,6 +455,7 @@
     .app { padding: 12px 12px 40px; }
     .logo { font-size: 1.4rem; }
     td, th { padding: 7px 8px; font-size: 0.8rem; }
+    .tabs { width: 100%; overflow-x: auto; }
   }
 </style>
 </head>
@@ -432,7 +465,7 @@
   <header class="header">
     <div class="header-left">
       <div class="logo">NHL<span>REF</span></div>
-      <span class="header-tag">2024–25 Season</span>
+      <span class="header-tag" id="seasonTag">Loading...</span>
     </div>
     <div class="header-right">
       <div class="status-dot" id="statusDot"></div>
@@ -445,6 +478,7 @@
   <div class="tabs">
     <button class="tab active" data-panel="overview" onclick="switchTab(this)">Overview</button>
     <button class="tab" data-panel="standings" onclick="switchTab(this)">Standings</button>
+    <button class="tab" data-panel="teams" onclick="switchTab(this)">Teams</button>
     <button class="tab" data-panel="schedule" onclick="switchTab(this)">Schedule</button>
   </div>
 
@@ -457,18 +491,38 @@
           <span class="card-title">Points Leaders</span>
           <div class="card-accent accent-ice"></div>
         </div>
-        <div id="skatersTable">
-          <div class="loading-state"><div class="loading-spinner"></div>Loading skaters...</div>
+        <div id="pointsLeadersTable">
+          <div class="loading-state"><div class="loading-spinner"></div>Loading...</div>
+        </div>
+      </div>
+      <!-- Goals Leaders -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Goals Leaders</span>
+          <div class="card-accent accent-red"></div>
+        </div>
+        <div id="goalsLeadersTable">
+          <div class="loading-state"><div class="loading-spinner"></div>Loading...</div>
+        </div>
+      </div>
+      <!-- Assists Leaders -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Assists Leaders</span>
+          <div class="card-accent accent-green"></div>
+        </div>
+        <div id="assistsLeadersTable">
+          <div class="loading-state"><div class="loading-spinner"></div>Loading...</div>
         </div>
       </div>
       <!-- GAA Leaders -->
       <div class="card">
         <div class="card-header">
           <span class="card-title">Goals Against Avg</span>
-          <div class="card-accent accent-red"></div>
+          <div class="card-accent accent-purple"></div>
         </div>
         <div id="goaliesTable">
-          <div class="loading-state"><div class="loading-spinner"></div>Loading goalies...</div>
+          <div class="loading-state"><div class="loading-spinner"></div>Loading...</div>
         </div>
       </div>
     </div>
@@ -491,6 +545,8 @@
       <button class="filter-btn active" data-filter="all" onclick="filterStandings(this, 'all')">All</button>
       <button class="filter-btn" data-filter="eastern" onclick="filterStandings(this, 'Eastern')">Eastern</button>
       <button class="filter-btn" data-filter="western" onclick="filterStandings(this, 'Western')">Western</button>
+      <span style="margin-left:8px;width:1px;height:18px;background:var(--border);display:inline-block"></span>
+      <button class="filter-btn" data-filter="wildcard" onclick="filterStandings(this, 'wildcard')">Wild Card</button>
     </div>
     <div class="card">
       <div class="card-header">
@@ -498,6 +554,23 @@
       </div>
       <div class="standings-scroll" id="fullStandings">
         <div class="loading-state"><div class="loading-spinner"></div>Loading standings...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAMS Panel -->
+  <div class="panel" id="panel-teams">
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterTeams(this, 'all')">All</button>
+      <button class="filter-btn" onclick="filterTeams(this, 'Eastern')">Eastern</button>
+      <button class="filter-btn" onclick="filterTeams(this, 'Western')">Western</button>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Team Statistics</span>
+      </div>
+      <div class="teams-scroll" id="teamsContent">
+        <div class="loading-state"><div class="loading-spinner"></div>Loading teams...</div>
       </div>
     </div>
   </div>
@@ -516,8 +589,22 @@
 const API = 'https://api-web.nhle.com/v1';
 let standingsData = [];
 let currentFilter = 'all';
+let currentTeamFilter = 'all';
+let teamsSortState = { col: 'points', dir: 'desc' };
 
-// Tab switching
+// ─── Dynamic season tag ───
+function updateSeasonTag() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-indexed
+  // NHL season spans Oct–Jun: if Jul–Sep, show upcoming season; otherwise current
+  const startYear = month >= 9 ? year : year - 1;
+  const endYear = startYear + 1;
+  const shortEnd = String(endYear).slice(-2);
+  document.getElementById('seasonTag').textContent = `${startYear}–${shortEnd} Season`;
+}
+
+// ─── Tab switching ───
 function switchTab(el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -525,14 +612,12 @@ function switchTab(el) {
   document.getElementById('panel-' + el.dataset.panel).classList.add('active');
 }
 
-// Fetch helper with CORS proxy fallback
+// ─── Fetch helper with CORS proxy fallback ───
 async function nhlFetch(endpoint) {
-  // Try direct first
   try {
     const r = await fetch(API + endpoint);
     if (r.ok) return await r.json();
   } catch(e) {}
-  // Fallback: corsproxy
   try {
     const r = await fetch('https://corsproxy.io/?' + encodeURIComponent(API + endpoint));
     if (r.ok) return await r.json();
@@ -540,15 +625,14 @@ async function nhlFetch(endpoint) {
   throw new Error('Failed to fetch ' + endpoint);
 }
 
-// Render skaters
-function renderSkaters(data) {
-  const container = document.getElementById('skatersTable');
+// ─── Render skater leaders (generic) ───
+function renderSkaterLeaders(data, containerId, category, statLabel, colorClass) {
+  const container = document.getElementById(containerId);
   try {
-    // The response structure: data with array of leader entries
-    const players = data.points || data.goals || data.assists || [];
-    if (!players.length) { container.innerHTML = '<div class="error-state">No skater data available</div>'; return; }
+    const players = data[category] || [];
+    if (!players.length) { container.innerHTML = '<div class="error-state">No data available</div>'; return; }
 
-    let html = '<table><thead><tr><th>#</th><th>Player</th><th>Team</th><th>GP</th><th>PTS</th></tr></thead><tbody>';
+    let html = `<table><thead><tr><th>#</th><th>Player</th><th>Team</th><th>GP</th><th>${statLabel}</th></tr></thead><tbody>`;
     players.slice(0, 10).forEach((p, i) => {
       const rank = i + 1;
       const rankClass = rank <= 3 ? ` rank-${rank}` : '';
@@ -562,17 +646,17 @@ function renderSkaters(data) {
         <td class="player-name">${firstName} ${lastName}</td>
         <td><span class="team-abbr">${team}</span></td>
         <td>${gp}</td>
-        <td class="stat-value">${value}</td>
+        <td class="stat-value ${colorClass}">${value}</td>
       </tr>`;
     });
     html += '</tbody></table>';
     container.innerHTML = html;
   } catch(e) {
-    container.innerHTML = '<div class="error-state">Error parsing skater data</div>';
+    container.innerHTML = '<div class="error-state">Error parsing data</div>';
   }
 }
 
-// Render goalies
+// ─── Render goalies ───
 function renderGoalies(data) {
   const container = document.getElementById('goaliesTable');
   try {
@@ -593,7 +677,7 @@ function renderGoalies(data) {
         <td class="player-name">${firstName} ${lastName}</td>
         <td><span class="team-abbr">${team}</span></td>
         <td>${gp}</td>
-        <td class="stat-value red">${value}</td>
+        <td class="stat-value purple">${value}</td>
       </tr>`;
     });
     html += '</tbody></table>';
@@ -603,12 +687,11 @@ function renderGoalies(data) {
   }
 }
 
-// Render standings
+// ─── Render standings ───
 function renderStandings(data, quickOnly = false) {
   const teams = data.standings || data || [];
   standingsData = teams;
 
-  // Sort by points (desc), then wins (desc)
   const sorted = [...teams].sort((a, b) => (b.points - a.points) || (b.wins - a.wins));
 
   if (quickOnly) {
@@ -644,7 +727,11 @@ function renderFullStandings(filter) {
   const container = document.getElementById('fullStandings');
   if (!standingsData.length) return;
 
-  // Group by division
+  if (filter === 'wildcard') {
+    renderWildCard(container);
+    return;
+  }
+
   const divisions = {};
   standingsData.forEach(t => {
     const conf = t.conferenceName || 'Unknown';
@@ -654,10 +741,8 @@ function renderFullStandings(filter) {
     divisions[div].push(t);
   });
 
-  // Sort each division by points
   Object.values(divisions).forEach(arr => arr.sort((a, b) => (b.points - a.points) || (b.wins - a.wins)));
 
-  // Preferred division order
   const divOrder = ['Atlantic', 'Metropolitan', 'Central', 'Pacific'];
   const sortedDivs = Object.keys(divisions).sort((a, b) => {
     const ai = divOrder.indexOf(a);
@@ -694,32 +779,206 @@ function renderFullStandings(filter) {
   container.innerHTML = html;
 }
 
+// ─── Wild Card view ───
+function renderWildCard(container) {
+  const conferences = { Eastern: {}, Western: {} };
+
+  standingsData.forEach(t => {
+    const conf = t.conferenceName || 'Unknown';
+    const div = t.divisionName || 'Unknown';
+    if (!conferences[conf]) return;
+    if (!conferences[conf][div]) conferences[conf][div] = [];
+    conferences[conf][div].push(t);
+  });
+
+  let html = '<table><thead><tr><th>#</th><th>Team</th><th>GP</th><th>W</th><th>L</th><th>OTL</th><th>PTS</th><th>DIFF</th></tr></thead><tbody>';
+
+  ['Eastern', 'Western'].forEach(conf => {
+    const divs = conferences[conf];
+    const divNames = Object.keys(divs);
+
+    // Top 3 from each division
+    divNames.forEach(div => {
+      divs[div].sort((a, b) => (b.points - a.points) || (b.wins - a.wins));
+    });
+
+    html += `<tr class="division-header"><td colspan="8">${conf} Conference</td></tr>`;
+
+    divNames.forEach(div => {
+      const top3 = divs[div].slice(0, 3);
+      html += `<tr class="division-header"><td colspan="8" style="color:var(--text-secondary);font-size:0.7rem;padding:5px 14px">${div} — Top 3</td></tr>`;
+      top3.forEach((t, i) => {
+        html += buildStandingsRow(t, i + 1);
+      });
+    });
+
+    // Wild Card spots: all teams outside top 3, sorted by points
+    const wildCards = [];
+    divNames.forEach(div => {
+      divs[div].slice(3).forEach(t => wildCards.push(t));
+    });
+    wildCards.sort((a, b) => (b.points - a.points) || (b.wins - a.wins));
+
+    html += `<tr class="division-header"><td colspan="8" style="color:var(--accent-orange);font-size:0.7rem;padding:5px 14px">Wild Card</td></tr>`;
+    wildCards.forEach((t, i) => {
+      html += buildStandingsRow(t, i + 1);
+    });
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function buildStandingsRow(t, rank) {
+  const abbr = t.teamAbbrev?.default || t.teamAbbrev || '—';
+  const diff = (t.goalDifferential ?? (t.goalFor - t.goalAgainst)) || 0;
+  const diffClass = diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : 'diff-zero';
+  const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+  return `<tr>
+    <td class="rank-cell">${rank}</td>
+    <td><span class="team-abbr">${abbr}</span> ${t.teamName?.default || t.teamCommonName?.default || ''}</td>
+    <td>${t.gamesPlayed ?? '—'}</td>
+    <td>${t.wins ?? '—'}</td>
+    <td>${t.losses ?? '—'}</td>
+    <td>${t.otLosses ?? '—'}</td>
+    <td class="stat-value">${t.points ?? '—'}</td>
+    <td class="${diffClass}">${diffStr}</td>
+  </tr>`;
+}
+
 function filterStandings(el, filter) {
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#panel-standings .filter-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   currentFilter = filter;
   renderFullStandings(filter);
 }
 
-// Render schedule
+// ─── Teams tab ───
+function renderTeams() {
+  renderTeamsTable(currentTeamFilter);
+}
+
+function renderTeamsTable(filter) {
+  const container = document.getElementById('teamsContent');
+  if (!standingsData.length) return;
+
+  let teams = [...standingsData];
+  if (filter !== 'all') {
+    teams = teams.filter(t => (t.conferenceName || '') === filter);
+  }
+
+  // Sort
+  const { col, dir } = teamsSortState;
+  teams.sort((a, b) => {
+    let av = getTeamSortValue(a, col);
+    let bv = getTeamSortValue(b, col);
+    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+    if (av < bv) return dir === 'asc' ? -1 : 1;
+    if (av > bv) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const cols = [
+    { key: 'team', label: 'Team', sortable: true },
+    { key: 'gamesPlayed', label: 'GP', sortable: true },
+    { key: 'wins', label: 'W', sortable: true },
+    { key: 'losses', label: 'L', sortable: true },
+    { key: 'otLosses', label: 'OTL', sortable: true },
+    { key: 'points', label: 'PTS', sortable: true },
+    { key: 'pointPctg', label: 'PT%', sortable: true },
+    { key: 'goalFor', label: 'GF', sortable: true },
+    { key: 'goalAgainst', label: 'GA', sortable: true },
+    { key: 'diff', label: 'DIFF', sortable: true },
+    { key: 'regulationWins', label: 'RW', sortable: true },
+    { key: 'streakCode', label: 'STRK', sortable: false },
+  ];
+
+  let html = '<table><thead><tr>';
+  cols.forEach(c => {
+    const sortClass = c.sortable ? ' sortable' : '';
+    const activeClass = col === c.key ? (dir === 'asc' ? ' sort-asc' : ' sort-desc') : '';
+    const onclick = c.sortable ? ` onclick="sortTeams('${c.key}')"` : '';
+    html += `<th class="${sortClass}${activeClass}"${onclick}>${c.label}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  teams.forEach(t => {
+    const abbr = t.teamAbbrev?.default || t.teamAbbrev || '—';
+    const name = t.teamName?.default || t.teamCommonName?.default || '';
+    const diff = (t.goalDifferential ?? (t.goalFor - t.goalAgainst)) || 0;
+    const diffClass = diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : 'diff-zero';
+    const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+    const ptPctg = typeof t.pointPctg === 'number' ? t.pointPctg.toFixed(3) : (t.pointPctg ?? '—');
+    const streak = t.streakCode || '—';
+    html += `<tr>
+      <td><span class="team-abbr">${abbr}</span> ${name}</td>
+      <td>${t.gamesPlayed ?? '—'}</td>
+      <td>${t.wins ?? '—'}</td>
+      <td>${t.losses ?? '—'}</td>
+      <td>${t.otLosses ?? '—'}</td>
+      <td class="stat-value">${t.points ?? '—'}</td>
+      <td style="font-family:'Source Code Pro',monospace;font-size:0.85rem">${ptPctg}</td>
+      <td>${t.goalFor ?? '—'}</td>
+      <td>${t.goalAgainst ?? '—'}</td>
+      <td class="${diffClass}">${diffStr}</td>
+      <td>${t.regulationWins ?? '—'}</td>
+      <td style="font-family:'Source Code Pro',monospace;font-size:0.78rem">${streak}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function getTeamSortValue(t, col) {
+  switch (col) {
+    case 'team': return t.teamName?.default || t.teamCommonName?.default || '';
+    case 'diff': return (t.goalDifferential ?? (t.goalFor - t.goalAgainst)) || 0;
+    case 'pointPctg': return t.pointPctg ?? 0;
+    default: return t[col] ?? 0;
+  }
+}
+
+function sortTeams(col) {
+  if (teamsSortState.col === col) {
+    teamsSortState.dir = teamsSortState.dir === 'desc' ? 'asc' : 'desc';
+  } else {
+    teamsSortState.col = col;
+    teamsSortState.dir = 'desc';
+  }
+  renderTeamsTable(currentTeamFilter);
+}
+
+function filterTeams(el, filter) {
+  document.querySelectorAll('#panel-teams .filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentTeamFilter = filter;
+  renderTeamsTable(filter);
+}
+
+// ─── Render schedule ───
 function renderSchedule(data) {
   const container = document.getElementById('scheduleContent');
   try {
     const gameWeek = data.gameWeek || [];
     if (!gameWeek.length) { container.innerHTML = '<div class="error-state">No games scheduled</div>'; return; }
 
+    const todayStr = new Date().toISOString().slice(0, 10);
     let html = '';
+
     gameWeek.forEach(day => {
       const dateStr = new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+      const isToday = day.date === todayStr;
+      const todayTag = isToday ? '<span class="today-label">Today</span>' : '';
       html += `<div style="margin-bottom:24px">
-        <div style="font-family:'Oswald',sans-serif;font-weight:600;font-size:0.85rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:12px;padding-left:2px">${dateStr}</div>
+        <div style="font-family:'Oswald',sans-serif;font-weight:600;font-size:0.85rem;letter-spacing:1.5px;text-transform:uppercase;color:${isToday ? 'var(--accent-ice)' : 'var(--text-secondary)'};margin-bottom:12px;padding-left:2px">${dateStr}${todayTag}</div>
         <div class="schedule-grid">`;
 
       if (!day.games || !day.games.length) {
         html += '<div class="game-card"><div style="padding:20px;text-align:center;color:var(--text-muted);font-size:0.85rem">No games</div></div>';
       } else {
         day.games.forEach(game => {
-          const state = game.gameState; // FUT, LIVE, OFF, FINAL, CRIT
+          const state = game.gameState;
           const isLive = state === 'LIVE' || state === 'CRIT';
           const isFinal = state === 'OFF' || state === 'FINAL';
 
@@ -734,7 +993,10 @@ function renderSchedule(data) {
             const clock = game.clock?.timeRemaining || '';
             statusStr = `<span class="live-badge">● LIVE</span> <span>${period ? 'P' + period : ''} ${clock}</span>`;
           } else if (isFinal) {
-            statusStr = 'Final' + (game.periodDescriptor?.number > 3 ? ' / OT' : '');
+            const otLabel = game.periodDescriptor?.number > 3
+              ? (game.periodDescriptor?.periodType === 'SO' ? ' / SO' : ' / OT')
+              : '';
+            statusStr = 'Final' + otLabel;
           } else {
             const time = game.startTimeUTC ? new Date(game.startTimeUTC).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
             statusStr = time;
@@ -744,14 +1006,18 @@ function renderSchedule(data) {
           const awayScore = away.score ?? 0;
           const homeScore = home.score ?? 0;
 
+          const awayWon = isFinal && awayScore > homeScore;
+          const homeWon = isFinal && homeScore > awayScore;
+
           html += `<div class="game-card${isLive ? ' live' : ''}">
             <div class="game-meta">
               <span>${game.venue?.default || ''}</span>
               <span>${statusStr}</span>
             </div>
             <div class="game-matchup">
-              <div class="game-team">
+              <div class="game-team${awayWon ? ' game-winner' : ''}">
                 <div class="game-team-abbr">${awayAbbr}</div>
+                ${away.record ? `<div class="game-team-record">${away.record}</div>` : ''}
               </div>
               <div style="text-align:center">
                 ${showScore
@@ -759,8 +1025,9 @@ function renderSchedule(data) {
                   : `<div class="game-vs">VS</div>`
                 }
               </div>
-              <div class="game-team">
+              <div class="game-team${homeWon ? ' game-winner' : ''}">
                 <div class="game-team-abbr">${homeAbbr}</div>
+                ${home.record ? `<div class="game-team-record">${home.record}</div>` : ''}
               </div>
             </div>
           </div>`;
@@ -774,7 +1041,7 @@ function renderSchedule(data) {
   }
 }
 
-// Main fetch
+// ─── Main fetch (parallel) ───
 async function refreshAll() {
   const btn = document.getElementById('refreshBtn');
   const statusText = document.getElementById('statusText');
@@ -784,28 +1051,69 @@ async function refreshAll() {
   btn.textContent = 'Loading...';
   statusText.textContent = 'Fetching...';
   statusDot.style.background = 'var(--accent-orange)';
+  statusDot.style.boxShadow = '0 0 6px var(--accent-orange)';
+
+  const results = await Promise.allSettled([
+    nhlFetch('/skater-stats-leaders/current/2?categories=points&limit=10'),
+    nhlFetch('/skater-stats-leaders/current/2?categories=goals&limit=10'),
+    nhlFetch('/skater-stats-leaders/current/2?categories=assists&limit=10'),
+    nhlFetch('/goalie-stats-leaders/current/2?categories=goalsAgainstAverage&limit=10'),
+    nhlFetch('/standings/now'),
+    nhlFetch('/schedule/now'),
+  ]);
 
   let errors = 0;
 
-  try {
-    const skaters = await nhlFetch('/skater-stats-leaders/current/2?categories=points&limit=10');
-    renderSkaters(skaters);
-  } catch(e) { errors++; document.getElementById('skatersTable').innerHTML = '<div class="error-state">Could not load skaters — CORS or API issue. Try opening this file locally or via a server.</div>'; }
+  // Points leaders
+  if (results[0].status === 'fulfilled') {
+    renderSkaterLeaders(results[0].value, 'pointsLeadersTable', 'points', 'PTS', '');
+  } else {
+    errors++;
+    document.getElementById('pointsLeadersTable').innerHTML = '<div class="error-state">Could not load points leaders</div>';
+  }
 
-  try {
-    const goalies = await nhlFetch('/goalie-stats-leaders/current/2?categories=goalsAgainstAverage&limit=10');
-    renderGoalies(goalies);
-  } catch(e) { errors++; document.getElementById('goaliesTable').innerHTML = '<div class="error-state">Could not load goalies</div>'; }
+  // Goals leaders
+  if (results[1].status === 'fulfilled') {
+    renderSkaterLeaders(results[1].value, 'goalsLeadersTable', 'goals', 'G', 'red');
+  } else {
+    errors++;
+    document.getElementById('goalsLeadersTable').innerHTML = '<div class="error-state">Could not load goals leaders</div>';
+  }
 
-  try {
-    const standings = await nhlFetch('/standings/now');
-    renderStandings(standings, true);
-  } catch(e) { errors++; document.getElementById('quickStandings').innerHTML = '<div class="error-state">Could not load standings</div>'; document.getElementById('fullStandings').innerHTML = '<div class="error-state">Could not load standings</div>'; }
+  // Assists leaders
+  if (results[2].status === 'fulfilled') {
+    renderSkaterLeaders(results[2].value, 'assistsLeadersTable', 'assists', 'A', 'green');
+  } else {
+    errors++;
+    document.getElementById('assistsLeadersTable').innerHTML = '<div class="error-state">Could not load assists leaders</div>';
+  }
 
-  try {
-    const schedule = await nhlFetch('/schedule/now');
-    renderSchedule(schedule);
-  } catch(e) { errors++; document.getElementById('scheduleContent').innerHTML = '<div class="error-state">Could not load schedule</div>'; }
+  // Goalies
+  if (results[3].status === 'fulfilled') {
+    renderGoalies(results[3].value);
+  } else {
+    errors++;
+    document.getElementById('goaliesTable').innerHTML = '<div class="error-state">Could not load goalies</div>';
+  }
+
+  // Standings
+  if (results[4].status === 'fulfilled') {
+    renderStandings(results[4].value, true);
+    renderTeams();
+  } else {
+    errors++;
+    document.getElementById('quickStandings').innerHTML = '<div class="error-state">Could not load standings</div>';
+    document.getElementById('fullStandings').innerHTML = '<div class="error-state">Could not load standings</div>';
+    document.getElementById('teamsContent').innerHTML = '<div class="error-state">Could not load teams</div>';
+  }
+
+  // Schedule
+  if (results[5].status === 'fulfilled') {
+    renderSchedule(results[5].value);
+  } else {
+    errors++;
+    document.getElementById('scheduleContent').innerHTML = '<div class="error-state">Could not load schedule</div>';
+  }
 
   btn.classList.remove('loading');
   btn.textContent = 'Refresh';
@@ -814,7 +1122,7 @@ async function refreshAll() {
     statusText.textContent = 'Live';
     statusDot.style.background = 'var(--accent-green)';
     statusDot.style.boxShadow = '0 0 6px var(--accent-green)';
-  } else if (errors < 4) {
+  } else if (errors < 6) {
     statusText.textContent = 'Partial';
     statusDot.style.background = 'var(--accent-orange)';
     statusDot.style.boxShadow = '0 0 6px var(--accent-orange)';
@@ -831,6 +1139,7 @@ async function refreshAll() {
 setInterval(refreshAll, 300000);
 
 // Initial load
+updateSeasonTag();
 refreshAll();
 </script>
 </body>
